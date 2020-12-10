@@ -1,0 +1,2101 @@
+1. Write a JAVA Program to implement built-in support (java.util.Observable) Weather station with members temperature, humidity, pressure and methods mesurmentsChanged(), setMesurment(), getTemperature(), getHumidity(), getPressure()
+//Observer Pattern
+package wobsrvr;
+
+import java.util.Observable;
+import java.util.Observer;
+	
+public class CurrentConditionsDisplay implements Observer, DisplayElement {
+	Observable observable;
+	private float temperature;
+	private float humidity;
+	
+	public CurrentConditionsDisplay(Observable observable) {
+		this.observable = observable;
+		observable.addObserver(this);
+	}
+	
+	public void update(Observable obs, Object arg) {
+		if (obs instanceof WeatherData) {
+			WeatherData weatherData = (WeatherData)obs;
+			this.temperature = weatherData.getTemperature();
+			this.humidity = weatherData.getHumidity();
+			display();
+		}
+	}
+	
+	public void display() {
+		System.out.println("Current conditions: " + temperature 
+			+ "F degrees and " + humidity + "% humidity");
+	}
+}
+
+package wobsrvr;
+
+public interface DisplayElement {
+	public void display();
+}
+
+package wobsrvr;
+
+import java.util.Observable;
+import java.util.Observer;
+
+public class ForecastDisplay implements Observer, DisplayElement {
+	private float currentPressure = 29.92f;  
+	private float lastPressure;
+
+	public ForecastDisplay(Observable observable) {
+		observable.addObserver(this);
+	}
+
+	public void update(Observable observable, Object arg) {
+		if (observable instanceof WeatherData) {
+			WeatherData weatherData = (WeatherData)observable;
+			lastPressure = currentPressure;
+			currentPressure = weatherData.getPressure();
+			display();
+		}
+	}
+
+	public void display() {
+		System.out.print("Forecast: ");
+		if (currentPressure > lastPressure) {
+			System.out.println("Improving weather on the way!");
+		} else if (currentPressure == lastPressure) {
+			System.out.println("More of the same");
+		} else if (currentPressure < lastPressure) {
+			System.out.println("Watch out for cooler, rainy weather");
+		}
+	}
+}
+
+package wobsrvr;
+
+import java.util.Observable;
+import java.util.Observer;
+
+public class HeatIndexDisplay implements Observer, DisplayElement {
+	float heatIndex = 0.0f;
+
+	public HeatIndexDisplay(Observable observable) {
+		observable.addObserver(this);
+	}
+
+	public void update(Observable observable, Object arg) {
+		if (observable instanceof WeatherData) {
+			WeatherData weatherData = (WeatherData)observable;
+			float t = weatherData.getTemperature();
+			float rh = weatherData.getHumidity();
+			heatIndex = (float)
+				(
+				(16.923 + (0.185212 * t)) + 
+				(5.37941 * rh) - 
+				(0.100254 * t * rh) + 
+				(0.00941695 * (t * t)) + 
+				(0.00728898 * (rh * rh)) + 
+				(0.000345372 * (t * t * rh)) - 
+				(0.000814971 * (t * rh * rh)) +
+				(0.0000102102 * (t * t * rh * rh)) - 
+				(0.000038646 * (t * t * t)) + 
+				(0.0000291583 * (rh * rh * rh)) +
+				(0.00000142721 * (t * t * t * rh)) + 
+				(0.000000197483 * (t * rh * rh * rh)) - 
+				(0.0000000218429 * (t * t * t * rh * rh)) +
+				(0.000000000843296 * (t * t * rh * rh * rh)) -
+				(0.0000000000481975 * (t * t * t * rh * rh * rh)));
+			display();
+		}
+	}
+
+	public void display() {
+		System.out.println("Heat index is " + heatIndex);
+	}
+}
+
+package wobsrvr;
+
+import java.util.Observable;
+import java.util.Observer;
+
+public class StatisticsDisplay implements Observer, DisplayElement {
+	private float maxTemp = 0.0f;
+	private float minTemp = 200;
+	private float tempSum= 0.0f;
+	private int numReadings;
+
+	public StatisticsDisplay(Observable observable) {
+		observable.addObserver(this);
+	}
+
+	public void update(Observable observable, Object arg) {
+		if (observable instanceof WeatherData) {
+			WeatherData weatherData = (WeatherData)observable;
+			float temp = weatherData.getTemperature();
+			tempSum += temp;
+			numReadings++;
+
+			if (temp > maxTemp) {
+				maxTemp = temp;
+			}
+ 
+			if (temp < minTemp) {
+				minTemp = temp;
+			}
+
+			display();
+		}
+	}
+
+	public void display() {
+		System.out.println("Avg/Max/Min temperature = " + (tempSum / numReadings)
+			+ "/" + maxTemp + "/" + minTemp);
+	}
+}
+
+package wobsrvr;
+
+import java.util.Observable;
+import java.util.Observer;
+	
+public class WeatherData extends Observable {
+	private float temperature;
+	private float humidity;
+	private float pressure;
+	
+	public WeatherData() { }
+	
+	public void measurementsChanged() {
+		setChanged();
+		notifyObservers();
+	}
+	
+	public void setMeasurements(float temperature, float humidity, float pressure) {
+		this.temperature = temperature;
+		this.humidity = humidity;
+		this.pressure = pressure;
+		measurementsChanged();
+	}
+	
+	public float getTemperature() {
+		return temperature;
+	}
+	
+	public float getHumidity() {
+		return humidity;
+	}
+	
+	public float getPressure() {
+		return pressure;
+	}
+}
+
+package wobsrvr;
+
+public class WeatherStation {
+
+	public static void main(String[] args) {
+		WeatherData weatherData = new WeatherData();
+		CurrentConditionsDisplay currentConditions = new CurrentConditionsDisplay(weatherData);
+		StatisticsDisplay statisticsDisplay = new StatisticsDisplay(weatherData);
+		ForecastDisplay forecastDisplay = new ForecastDisplay(weatherData);
+
+		weatherData.setMeasurements(80, 65, 30.4f);
+		weatherData.setMeasurements(82, 70, 29.2f);
+		weatherData.setMeasurements(78, 90, 29.2f);
+	}
+}
+
+package wobsrvr;
+
+public class WeatherStationHeatIndex {
+
+	public static void main(String[] args) {
+		WeatherData weatherData = new WeatherData();
+		CurrentConditionsDisplay currentConditions = new CurrentConditionsDisplay(weatherData);
+		StatisticsDisplay statisticsDisplay = new StatisticsDisplay(weatherData);
+		ForecastDisplay forecastDisplay = new ForecastDisplay(weatherData);
+		HeatIndexDisplay heatIndexDisplay = new HeatIndexDisplay(weatherData);
+
+		weatherData.setMeasurements(80, 65, 30.4f);
+		weatherData.setMeasurements(82, 70, 29.2f);
+		weatherData.setMeasurements(78, 90, 29.2f);
+	}
+}
+/*OUTPUT*/
+Heat index is 82.95535
+Forecast: Improving weather on the way!
+Avg/Max/Min temperature = 80.0/80.0/80.0
+Current conditions: 80.0F degrees and 65.0% humidity
+Heat index is 86.90124
+Forecast: Watch out for cooler, rainy weather
+Avg/Max/Min temperature = 81.0/82.0/80.0
+Current conditions: 82.0F degrees and 70.0% humidity
+Heat index is 83.64967
+Forecast: More of the same
+Avg/Max/Min temperature = 80.0/82.0/78.0
+Current conditions: 78.0F degrees and 90.0% humidity
+
+2. Write a Java Program to implement I/O Decorator for converting uppercase letters to lower case letters.
+//LowerCaseInputStream.java
+package pattrn;
+import java.io.*;
+public class LowerCaseInputStream extends FilterInputStream {
+	public LowerCaseInputStream(InputStream in) { 
+		super(in); 
+		} 
+	public int read() throws IOException 
+	{ 
+		int c = super.read(); 
+		return (c == -1 ? c : Character.toLowerCase((char)c)); 
+	} 
+	public int read(byte[] b, int offset, int len) throws IOException 
+	{ 
+		int result = super.read(b, offset, len); 
+		for (int i = offset; i < offset+result; i++) 
+		{ 
+			b[i] = (byte)Character.toLowerCase((char)b[i]); 
+		} 
+		return result;
+	}
+
+}
+
+// InputTest.java
+package pattrn;
+import java.io.*;
+public class InputTest {
+	public static void main(String[] args) throws IOException 
+	{ 
+		int c; 
+		try 
+		{ 
+			InputStream in = new LowerCaseInputStream( new BufferedInputStream( new FileInputStream("test.txt"))); 
+			while((c = in.read()) >= 0) 
+			{ 
+				System.out.print((char)c);
+			} 
+			in.close(); 
+		} 
+		catch (IOException e) 
+		{ 
+			e.printStackTrace();
+		}
+	}
+
+}
+
+//test.txt
+I now know the DECORATOR PATTERN.
+
+*OUTPUT*
+i now know the decorator pattern.
+
+3. Write a Java Program to implement Factory method for Pizza Store with createPizza(), orederPizza(), prepare(), Bake(), cut(), box(). Use this to create variety of pizza’s like NyStyleCheesePizza, ChicagoStyleCheesePizza.
+//Pizza.java
+package pp;
+abstract class Pizza 
+{ 
+	    // it is an abstract pizza 
+	   String description = "Unkknown Pizza"; 
+	  
+	   public String getDescription() 
+	   { 
+	        return description; 
+	   } 
+	  
+	    public abstract int getCost(); 
+} 
+
+//ToppingsDecorator.java
+package pp;
+
+public abstract class ToppingsDecorator extends Pizza{
+	 public abstract String getDescription(); 
+
+}
+
+//Paneer.java
+package pp;
+
+class Paneer extends ToppingsDecorator 
+{ 
+    Pizza pizza; 
+    public Paneer(Pizza pizza)  {  this.pizza = pizza; } 
+    public String getDescription() { 
+        return pizza.getDescription() + ", Paneer "; 
+    } 
+    public int getCost()  {  return 70 + pizza.getCost(); } 
+} 
+
+//FarmHouse.java
+package pp;
+
+public class FarmHouse extends Pizza {
+	public FarmHouse() {  description = "FarmHouse"; } 
+    public int getCost() { return 200; } 
+
+}
+
+//FreshTomato.java
+package pp;
+
+public class FreshTomato extends ToppingsDecorator{
+	Pizza pizza; 
+	  
+    public FreshTomato(Pizza pizza) { this.pizza = pizza; } 
+    public String getDescription() { 
+        return pizza.getDescription() + ", Fresh Tomato "; 
+    } 
+    public int getCost() { return 40 + pizza.getCost(); }
+
+}
+
+//ChickenFiesta.java
+package pp;
+
+public class ChickenFiesta extends Pizza{
+	 public ChickenFiesta() { description = "ChickenFiesta";} 
+	    public int getCost() { return 200; } 
+
+}
+
+//Barbeque.java
+package pp;
+
+public class Barbeque extends ToppingsDecorator {
+	Pizza pizza; 
+    public Barbeque(Pizza pizza) {  this.pizza = pizza;  } 
+    public String getDescription() { 
+        return pizza.getDescription() + ", Barbeque "; 
+    } 
+    public int getCost() { return 90 + pizza.getCost(); } 
+
+}
+
+//Margherita.java
+package pp;
+
+public class Margherita extends Pizza {
+	public Margherita()  { description = "Margherita"; } 
+    public int getCost() { return 100;  } 
+
+}
+
+//PeppyPaneer.java
+package pp;
+
+public class PeppyPaneer extends Pizza{
+	 public PeppyPaneer() { description = "PeppyPaneer"; } 
+	    public int getCost() {  return 100; } 
+
+}
+
+//SimplePizza.java
+package pp;
+
+public class SimplePizza extends Pizza{
+	public SimplePizza() { description = "SimplePizza"; } 
+	public int getCost() {  return 50;  } 
+
+}
+
+//PizzaStore.java
+package pp;
+
+class PizzaStore 
+{ 
+    public static void main(String args[]) 
+    { 
+        // create new margherita pizza 
+        Pizza pizza = new Margherita(); 
+        System.out.println( pizza.getDescription() + 
+                         " Cost :" + pizza.getCost()); 
+  
+        // create new FarmHouse pizza 
+        Pizza pizza2 = new FarmHouse(); 
+  
+        // decorate it with freshtomato topping 
+        pizza2 = new FreshTomato(pizza2); 
+  
+        //decorate it with paneer topping 
+        pizza2 = new Paneer(pizza2); 
+  
+        System.out.println( pizza2.getDescription() + " Cost :" + pizza2.getCost()); 
+        //Pizza pizza3 = new Barbeque(null);    //no specific pizza 
+        //System.out.println( pizza3.getDescription() + "  Cost :" + pizza3.getCost()); 
+   } 
+} 
+
+*OUTPUT*
+Margherita Cost :100
+FarmHouse, Fresh Tomato , Paneer  Cost :310
+
+4. Write a Java Program to implement Singleton pattern for multithreading.
+// singleton Program
+package sadppract;
+
+public class Main {
+	public static void main(String args[])
+	{
+		Singleton s=Singleton.getInstance();
+		System.out.println("Object created");
+	}
+}
+
+
+package sadppract;
+
+public class Singleton {
+
+	private static Singleton uniqueInstance;
+		// TODO Auto-generated method stub
+	private Singleton(){}
+	
+	public static synchronized Singleton getInstance()
+	{
+		if(uniqueInstance==null)
+		{
+			uniqueInstance =new Singleton();
+		}
+		return uniqueInstance;
+	}
+}
+/*OUTPUT*/
+Object created
+
+ 5. Write a Java Program to implement command pattern to test Remote Control.
+//Command Pattern
+First we'll create our command interface:
+
+//Command
+public interface Command{
+  public void execute();
+}
+
+
+Now let's create two concrete commands. One will turn on the lights, another turns off lights:
+
+//Concrete Command
+public class LightOnCommand implements Command{
+  //reference to the light
+  Light light;
+  public LightOnCommand(Light light){
+    this.light = light;
+  }
+  public void execute(){
+    light.switchOn();
+  }
+} 
+
+
+//Concrete Command
+public class LightOffCommand implements Command{
+  //reference to the light
+  Light light;
+  public LightOffCommand(Light light){
+    this.light = light;
+  }
+  public void execute(){
+    light.switchOff();
+  }
+}
+
+
+Light is our receiver class, so let's set that up now:
+
+//Receiver
+public class Light{
+  private boolean on;
+  public void switchOn(){
+    on = true;
+  }
+  public void switchOff(){
+    on = false;
+  }
+}
+
+
+Our invoker in this case is the remote control.
+
+//Invoker
+public class RemoteControl{
+  private Command command;
+  public void setCommand(Command command){
+    this.command = command;
+  }
+  public void pressButton(){
+    command.execute();
+  }
+}
+
+
+Finally we'll set up a client to use the invoker
+
+//Client
+public class Client{
+  public static void main(String[] args)    {
+    RemoteControl control = new RemoteControl();
+    Light light = new Light();
+    Command lightsOn = new LightsOnCommand(light);
+    Command lightsOff = new LightsOffCommand(light);
+
+    //switch on
+    control.setCommand(lightsOn);
+    control.pressButton();
+
+    //switch off
+    control.setCommand(lightsOff);
+    control.pressButton();
+  }
+}
+/*OUTPUT*/
+Lights on!
+Lights off!
+
+6. Write a Java Program to implement undo command to test Ceiling fan. 
+//Undo Operation with Remote Control
+
+package undo;
+
+public class CeilingFan {
+	public static final int HIGH = 3;
+	public static final int MEDIUM = 2;
+	public static final int LOW = 1;
+	public static final int OFF = 0;
+	String location;
+	int speed;
+ 
+	public CeilingFan(String location) {
+		this.location = location;
+		speed = OFF;
+	}
+  
+	public void high() {
+		speed = HIGH;
+		System.out.println(location + " ceiling fan is on high");
+	} 
+ 
+	public void medium() {
+		speed = MEDIUM;
+		System.out.println(location + " ceiling fan is on medium");
+	}
+ 
+	public void low() {
+		speed = LOW;
+		System.out.println(location + " ceiling fan is on low");
+	}
+  
+	public void off() {
+		speed = OFF;
+		System.out.println(location + " ceiling fan is off");
+	}
+  
+	public int getSpeed() {
+		return speed;
+	}
+}
+
+package undo;
+
+public class CeilingFanHighCommand implements Command {
+	CeilingFan ceilingFan;
+	int prevSpeed;
+  
+	public CeilingFanHighCommand(CeilingFan ceilingFan) {
+		this.ceilingFan = ceilingFan;
+	}
+ 
+	public void execute() {
+		prevSpeed = ceilingFan.getSpeed();
+		ceilingFan.high();
+	}
+ 
+	public void undo() {
+		if (prevSpeed == CeilingFan.HIGH) {
+			ceilingFan.high();
+		} else if (prevSpeed == CeilingFan.MEDIUM) {
+			ceilingFan.medium();
+		} else if (prevSpeed == CeilingFan.LOW) {
+			ceilingFan.low();
+		} else if (prevSpeed == CeilingFan.OFF) {
+			ceilingFan.off();
+		}
+	}
+}
+
+package undo;
+
+public class CeilingFanLowCommand implements Command {
+	CeilingFan ceilingFan;
+	int prevSpeed;
+  
+	public CeilingFanLowCommand(CeilingFan ceilingFan) {
+		this.ceilingFan = ceilingFan;
+	}
+ 
+	public void execute() {
+		prevSpeed = ceilingFan.getSpeed();
+		ceilingFan.low();
+	}
+ 
+	public void undo() {
+		if (prevSpeed == CeilingFan.HIGH) {
+			ceilingFan.high();
+		} else if (prevSpeed == CeilingFan.MEDIUM) {
+			ceilingFan.medium();
+		} else if (prevSpeed == CeilingFan.LOW) {
+			ceilingFan.low();
+		} else if (prevSpeed == CeilingFan.OFF) {
+			ceilingFan.off();
+		}
+	}
+}
+
+package undo;
+
+public class CeilingFanMediumCommand implements Command {
+	CeilingFan ceilingFan;
+	int prevSpeed;
+  
+	public CeilingFanMediumCommand(CeilingFan ceilingFan) {
+		this.ceilingFan = ceilingFan;
+	}
+ 
+	public void execute() {
+		prevSpeed = ceilingFan.getSpeed();
+		ceilingFan.medium();
+	}
+ 
+	public void undo() {
+		if (prevSpeed == CeilingFan.HIGH) {
+			ceilingFan.high();
+		} else if (prevSpeed == CeilingFan.MEDIUM) {
+			ceilingFan.medium();
+		} else if (prevSpeed == CeilingFan.LOW) {
+			ceilingFan.low();
+		} else if (prevSpeed == CeilingFan.OFF) {
+			ceilingFan.off();
+		}
+	}
+}
+
+package undo;
+
+public class CeilingFanOffCommand implements Command {
+	CeilingFan ceilingFan;
+	int prevSpeed;
+  
+	public CeilingFanOffCommand(CeilingFan ceilingFan) {
+		this.ceilingFan = ceilingFan;
+	}
+ 
+	public void execute() {
+		prevSpeed = ceilingFan.getSpeed();
+		ceilingFan.off();
+	}
+ 
+	public void undo() {
+		if (prevSpeed == CeilingFan.HIGH) {
+			ceilingFan.high();
+		} else if (prevSpeed == CeilingFan.MEDIUM) {
+			ceilingFan.medium();
+		} else if (prevSpeed == CeilingFan.LOW) {
+			ceilingFan.low();
+		} else if (prevSpeed == CeilingFan.OFF) {
+			ceilingFan.off();
+		}
+	}
+}
+
+package undo;
+
+public interface Command {
+	public void execute();
+	public void undo();
+}
+
+package undo;
+
+public class DimmerLightOffCommand implements Command {
+	Light light;
+	int prevLevel;
+
+	public DimmerLightOffCommand(Light light) {
+		this.light = light;
+		prevLevel = 100;
+	}
+
+	public void execute() {
+		prevLevel = light.getLevel();
+		light.off();
+	}
+
+	public void undo() {
+		light.dim(prevLevel);
+	}
+}
+
+package undo;
+
+public class DimmerLightOnCommand implements Command {
+	Light light;
+	int prevLevel;
+
+	public DimmerLightOnCommand(Light light) {
+		this.light = light;
+	}
+
+	public void execute() {
+		prevLevel = light.getLevel();
+		light.dim(75);
+	}
+
+	public void undo() {
+		light.dim(prevLevel);
+	}
+}
+
+package undo;
+
+public class Light {
+	String location;
+	int level;
+
+	public Light(String location) {
+		this.location = location;
+	}
+
+	public void on() {
+		level = 100;
+		System.out.println("Light is on");
+	}
+
+	public void off() {
+		level = 0;
+		System.out.println("Light is off");
+	}
+
+	public void dim(int level) {
+		this.level = level;
+		if (level == 0) {
+			off();
+		}
+		else {
+			System.out.println("Light is dimmed to " + level + "%");
+		}
+	}
+
+	public int getLevel() {
+		return level;
+	}
+}
+
+package undo;
+
+public class LightOffCommand implements Command {
+	Light light;
+	int level;
+	public LightOffCommand(Light light) {
+		this.light = light;
+	}
+ 
+	public void execute() {
+        level = light.getLevel();
+		light.off();
+	}
+ 
+	public void undo() {
+		light.dim(level);
+	}
+}
+
+
+
+package undo;
+
+public class LightOnCommand implements Command {
+	Light light;
+	int level;
+	public LightOnCommand(Light light) {
+		this.light = light;
+	}
+ 
+	public void execute() {
+        level = light.getLevel();
+		light.on();
+	}
+ 
+	public void undo() {
+		light.dim(level);
+	}
+}
+
+
+package undo;
+
+public class NoCommand implements Command {
+	public void execute() { }
+	public void undo() { }
+}
+
+
+package undo;
+
+import java.util.*;
+
+//
+// This is the invoker
+//
+public class RemoteControlWithUndo {
+	Command[] onCommands;
+	Command[] offCommands;
+	Command undoCommand;
+ 
+	public RemoteControlWithUndo() {
+		onCommands = new Command[7];
+		offCommands = new Command[7];
+ 
+		Command noCommand = new NoCommand();
+		for(int i=0;i<7;i++) {
+			onCommands[i] = noCommand;
+			offCommands[i] = noCommand;
+		}
+		undoCommand = noCommand;
+	}
+  
+	public void setCommand(int slot, Command onCommand, Command offCommand) {
+		onCommands[slot] = onCommand;
+		offCommands[slot] = offCommand;
+	}
+ 
+	public void onButtonWasPushed(int slot) {
+		onCommands[slot].execute();
+		undoCommand = onCommands[slot];
+	}
+ 
+	public void offButtonWasPushed(int slot) {
+		offCommands[slot].execute();
+		undoCommand = offCommands[slot];
+	}
+ 
+	public void undoButtonWasPushed() {
+		undoCommand.undo();
+	}
+  
+	public String toString() {
+		StringBuffer stringBuff = new StringBuffer();
+		stringBuff.append("\n------ Remote Control -------\n");
+		for (int i = 0; i < onCommands.length; i++) {
+			stringBuff.append("[slot " + i + "] " + onCommands[i].getClass().getName()
+				+ "    " + offCommands[i].getClass().getName() + "\n");
+		}
+		stringBuff.append("[undo] " + undoCommand.getClass().getName() + "\n");
+		return stringBuff.toString();
+	}
+}
+
+package undo;
+
+public class RemoteLoader {
+	 
+	public static void main(String[] args) {
+		RemoteControlWithUndo remoteControl = new RemoteControlWithUndo();
+ 
+		Light livingRoomLight = new Light("Living Room");
+ 
+		LightOnCommand livingRoomLightOn = 
+				new LightOnCommand(livingRoomLight);
+		LightOffCommand livingRoomLightOff = 
+				new LightOffCommand(livingRoomLight);
+ 
+		remoteControl.setCommand(0, livingRoomLightOn, livingRoomLightOff);
+ 
+		remoteControl.onButtonWasPushed(0);
+		remoteControl.offButtonWasPushed(0);
+		System.out.println(remoteControl);
+		remoteControl.undoButtonWasPushed();
+		remoteControl.offButtonWasPushed(0);
+		remoteControl.onButtonWasPushed(0);
+		System.out.println(remoteControl);
+		remoteControl.undoButtonWasPushed();
+
+		CeilingFan ceilingFan = new CeilingFan("Living Room");
+   
+		CeilingFanMediumCommand ceilingFanMedium = 
+				new CeilingFanMediumCommand(ceilingFan);
+		CeilingFanHighCommand ceilingFanHigh = 
+				new CeilingFanHighCommand(ceilingFan);
+		CeilingFanOffCommand ceilingFanOff = 
+				new CeilingFanOffCommand(ceilingFan);
+  
+		remoteControl.setCommand(0, ceilingFanMedium, ceilingFanOff);
+		remoteControl.setCommand(1, ceilingFanHigh, ceilingFanOff);
+   
+		remoteControl.onButtonWasPushed(0);
+		remoteControl.offButtonWasPushed(0);
+		System.out.println(remoteControl);
+		remoteControl.undoButtonWasPushed();
+  
+		remoteControl.onButtonWasPushed(1);
+		System.out.println(remoteControl);
+		remoteControl.undoButtonWasPushed();
+	}
+}
+/*OUTTPUT*/
+Light is on
+Light is off
+
+------ Remote Control -------
+[slot 0] undo.LightOnCommand    undo.LightOffCommand
+[slot 1] undo.NoCommand    undo.NoCommand
+[slot 2] undo.NoCommand    undo.NoCommand
+[slot 3] undo.NoCommand    undo.NoCommand
+[slot 4] undo.NoCommand    undo.NoCommand
+[slot 5] undo.NoCommand    undo.NoCommand
+[slot 6] undo.NoCommand    undo.NoCommand
+[undo] undo.LightOffCommand
+
+Light is dimmed to 100%
+Light is off
+Light is on
+
+------ Remote Control -------
+[slot 0] undo.LightOnCommand    undo.LightOffCommand
+[slot 1] undo.NoCommand    undo.NoCommand
+[slot 2] undo.NoCommand    undo.NoCommand
+[slot 3] undo.NoCommand    undo.NoCommand
+[slot 4] undo.NoCommand    undo.NoCommand
+[slot 5] undo.NoCommand    undo.NoCommand
+[slot 6] undo.NoCommand    undo.NoCommand
+[undo] undo.LightOnCommand
+
+Light is off
+Living Room ceiling fan is on medium
+Living Room ceiling fan is off
+
+------ Remote Control -------
+[slot 0] undo.CeilingFanMediumCommand    undo.CeilingFanOffCommand
+[slot 1] undo.CeilingFanHighCommand    undo.CeilingFanOffCommand
+[slot 2] undo.NoCommand    undo.NoCommand
+[slot 3] undo.NoCommand    undo.NoCommand
+[slot 4] undo.NoCommand    undo.NoCommand
+[slot 5] undo.NoCommand    undo.NoCommand
+[slot 6] undo.NoCommand    undo.NoCommand
+[undo] undo.CeilingFanOffCommand
+
+Living Room ceiling fan is on medium
+Living Room ceiling fan is on high
+
+------ Remote Control -------
+[slot 0] undo.CeilingFanMediumCommand    undo.CeilingFanOffCommand
+[slot 1] undo.CeilingFanHighCommand    undo.CeilingFanOffCommand
+[slot 2] undo.NoCommand    undo.NoCommand
+[slot 3] undo.NoCommand    undo.NoCommand
+[slot 4] undo.NoCommand    undo.NoCommand
+[slot 5] undo.NoCommand    undo.NoCommand
+[slot 6] undo.NoCommand    undo.NoCommand
+[undo] undo.CeilingFanHighCommand
+
+Living Room ceiling fan is on medium
+
+7. Write a Java Program to implement Adapter pattern for Enumeration iterator.
+//EnumerationIterator.java
+package adppp;
+
+import java.util.*;
+
+public class EnumerationIterator implements Iterator {
+	Enumeration enumeration;
+ 
+	public EnumerationIterator(Enumeration enumeration) {
+		this.enumeration = enumeration;
+	}
+ 
+	public boolean hasNext() {
+		return enumeration.hasMoreElements();
+	}
+ 
+	public Object next() {
+		return enumeration.nextElement();
+	}
+ 
+	public void remove() {
+		throw new UnsupportedOperationException();
+	}
+}
+
+//EnumerationIteratorTestDrive.java
+package adppp;
+
+import java.util.*;
+public class EnumerationIteratorTestDrive {
+	public static void main (String args[]) {
+		Vector v = new Vector(Arrays.asList(args));
+		Iterator iterator = new EnumerationIterator(v.elements());
+		while (iterator.hasNext()) {
+			System.out.println(iterator.next());
+		}
+	}
+}
+/*OUTPUT*/
+5
+10
+6
+
+8.Write a Java Program to implement Iterator Pattern for Designing Menu like Breakfast, Lunch or Dinner Menu.
+import java.util.Iterator;
+public interface Menu {
+	public Iterator createIterator();
+}
+
+import java.util.*;
+public class MenuItem {
+	String name;
+	String description;
+	boolean vegetarian;
+	double price;
+ 
+	public MenuItem(String name, 
+	                String description, 
+	                boolean vegetarian, 
+	                double price) 
+	{
+		this.name = name;
+		this.description = description;
+		this.vegetarian = vegetarian;
+		this.price = price;
+	}
+  
+	public String getName() {
+		return name;
+	}
+  
+	public String getDescription() {
+		return description;
+	}
+  
+	public double getPrice() {
+		return price;
+	}
+  
+	public boolean isVegetarian() {
+		return vegetarian;
+	}
+	public String toString() {
+		return (name + ", $" + price + "\n   " + description);
+	}
+}
+
+import java.util.ArrayList;
+import java.util.Iterator;
+public class Waitress {
+	PancakeHouseMenu pancakeHouseMenu;
+	DinerMenu dinerMenu;
+ 
+	public Waitress(PancakeHouseMenu pancakeHouseMenu, DinerMenu dinerMenu) {
+		this.pancakeHouseMenu = pancakeHouseMenu;
+		this.dinerMenu = dinerMenu;
+	}
+ 
+	public Waitress(ArrayList<MenuItem> list) {
+		// TODO Auto-generated constructor stub
+	}
+
+	public void printMenu() {
+		Iterator pancakeIterator = pancakeHouseMenu.createIterator();
+		Iterator dinerIterator = dinerMenu.createIterator();
+
+		System.out.println("MENU\n----\nBREAKFAST");
+		printMenu(pancakeIterator);
+		System.out.println("\nLUNCH");
+		printMenu(dinerIterator);
+	}
+ 
+	private void printMenu(Iterator iterator) {
+		while (iterator.hasNext()) {
+			MenuItem menuItem = (MenuItem)iterator.next();
+			System.out.print(menuItem.getName() + ", ");
+			System.out.print(menuItem.getPrice() + " -- ");
+			System.out.println(menuItem.getDescription());
+		}
+	}
+ 
+	public void printVegetarianMenu() {
+		printVegetarianMenu(pancakeHouseMenu.createIterator());
+		printVegetarianMenu(dinerMenu.createIterator());
+	}
+ 
+	public boolean isItemVegetarian(String name) {
+		Iterator breakfastIterator = pancakeHouseMenu.createIterator();
+		if (isVegetarian(name, breakfastIterator)) {
+			return true;
+		}
+		Iterator dinnerIterator = dinerMenu.createIterator();
+		if (isVegetarian(name, dinnerIterator)) {
+			return true;
+		}
+		return false;
+	}
+
+
+	private void printVegetarianMenu(Iterator iterator) {
+		while (iterator.hasNext()) {
+			MenuItem menuItem = (MenuItem)iterator.next();
+			if (menuItem.isVegetarian()) {
+				System.out.print(menuItem.getName());
+				System.out.println("\t\t" + menuItem.getPrice());
+				System.out.println("\t" + menuItem.getDescription());
+			}
+		}
+	}
+
+	private boolean isVegetarian(String name, Iterator iterator) {
+		while (iterator.hasNext()) {
+			MenuItem menuItem = (MenuItem)iterator.next();
+			if (menuItem.getName().equals(name)) {
+				if (menuItem.isVegetarian()) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	
+	public static void main(String args[])
+	{
+        MenuItem order1=new MenuItem("Akshay","Rice",false,1230.0);
+        MenuItem order2=new MenuItem("Jayant","Roti",true,550);
+        MenuItem order3=new MenuItem("Pranil","Meal",false,500.0);
+        MenuItem order4=new MenuItem("Aditya","Pizza",false,1000);
+        
+        ArrayList<MenuItem> list=new ArrayList<MenuItem>();
+        list.add(order1);
+        list.add(order2);
+        list.add(order3);
+        list.add(order4);
+        
+        Waitress w=new Waitress(list);
+        Iterator itr = list.iterator();
+        w.printMenu(itr);
+
+	}
+	
+}
+
+/*OUTPUT
+Akshay, 1230.0 -- Rice
+Jayant, 550.0 -- Roti
+Pranil, 500.0 -- Meal
+Aditya, 1000.0 -- Pizza
+*/
+
+9. Write a Java Program to implement State Pattern for Gumball Machine. Create instance variable that holds current state from there, we just need to handle all actions, behaviors and state transition that can happen. For actions we need to implement methods to insert a quarter, remove a quarter, turning the crank and display gumball.
+State design pattern
+First, we’re going to define a State interface that contains a method for every action in the Gumball Machine.
+
+public interface State {
+ 
+	public void insertQuarter();
+	public void ejectQuarter();
+	public void turnCrank();
+	public void dispense();
+	
+	public void refill();
+}
+
+ 
+Now we are going to implement a State class for every state of the machine. These classes will be responsible for the behavior of the machine (Context) when it is in the corresponding state. This way we delegate the work to the individual state classes.
+
+The first state that will implement the State interface is NoQuarterState:
+
+public class NoQuarterState implements State {
+    GumballMachine gumballMachine;
+ 
+    public NoQuarterState(GumballMachine gumballMachine) {
+        this.gumballMachine = gumballMachine;
+    }
+ 
+	public void insertQuarter() {
+		System.out.println("You inserted a quarter");
+		gumballMachine.setState(gumballMachine.getHasQuarterState());
+	}
+ 
+	public void ejectQuarter() {
+		System.out.println("You haven't inserted a quarter");
+	}
+ 
+	public void turnCrank() {
+		System.out.println("You turned, but there's no quarter");
+	 }
+ 
+	public void dispense() {
+		System.out.println("You need to pay first");
+	} 
+	
+	public void refill() { }
+ 
+	public String toString() {
+		return "waiting for quarter";
+	}
+}
+public class GumballMachine {
+ 
+	State soldOutState;
+	State noQuarterState;
+	State hasQuarterState;
+	State soldState;
+ 
+	State state;
+	int count = 0;
+ 
+	public GumballMachine(int numberGumballs) {
+		soldOutState = new SoldOutState(this);
+		noQuarterState = new NoQuarterState(this);
+		hasQuarterState = new HasQuarterState(this);
+		soldState = new SoldState(this);
+
+		this.count = numberGumballs;
+ 		if (numberGumballs > 0) {
+			state = noQuarterState;
+		} else {
+			state = soldOutState;
+		}
+	}
+ 
+	public void insertQuarter() {
+		state.insertQuarter();
+	}
+ 
+	public void ejectQuarter() {
+		state.ejectQuarter();
+	}
+ 
+	public void turnCrank() {
+		state.turnCrank();
+		state.dispense();
+	}
+ 
+	void releaseBall() {
+		System.out.println("A gumball comes rolling out the slot...");
+		if (count != 0) {
+			count = count - 1;
+		}
+	}
+ 
+	int getCount() {
+		return count;
+	}
+ 
+	void refill(int count) {
+		this.count += count;
+		System.out.println("The gumball machine was just refilled; it's new count is: " + this.count);
+		state.refill();
+	}
+
+	void setState(State state) {
+		this.state = state;
+	}
+    public State getState() {
+        return state;
+    }
+
+    public State getSoldOutState() {
+        return soldOutState;
+    }
+
+    public State getNoQuarterState() {
+        return noQuarterState;
+    }
+
+    public State getHasQuarterState() {
+        return hasQuarterState;
+    }
+
+    public State getSoldState() {
+        return soldState;
+    }
+ 
+	public String toString() {
+		StringBuffer result = new StringBuffer();
+		result.append("\nMighty Gumball, Inc.");
+		result.append("\nJava-enabled Standing Gumball Model #2004");
+		result.append("\nInventory: " + count + " gumball");
+		if (count != 1) {
+			result.append("s");
+		}
+		result.append("\n");
+		result.append("Machine is " + state + "\n");
+		return result.toString();
+	}
+}
+
+public class HasQuarterState implements State {
+	GumballMachine gumballMachine;
+ 
+	public HasQuarterState(GumballMachine gumballMachine) {
+		this.gumballMachine = gumballMachine;
+	}
+  
+	public void insertQuarter() {
+		System.out.println("You can't insert another quarter");
+	}
+ 
+	public void ejectQuarter() {
+		System.out.println("Quarter returned");
+		gumballMachine.setState(gumballMachine.getNoQuarterState());
+	}
+ 
+	public void turnCrank() {
+		System.out.println("You turned...");
+		gumballMachine.setState(gumballMachine.getSoldState());
+	}
+
+    public void dispense() {
+        System.out.println("No gumball dispensed");
+    }
+    
+    public void refill() { }
+ 
+	public String toString() {
+		return "waiting for turn of crank";
+	}
+}
+
+public class SoldState implements State {
+ 
+    GumballMachine gumballMachine;
+ 
+    public SoldState(GumballMachine gumballMachine) {
+        this.gumballMachine = gumballMachine;
+    }
+       
+	public void insertQuarter() {
+		System.out.println("Please wait, we're already giving you a gumball");
+	}
+ 
+	public void ejectQuarter() {
+		System.out.println("Sorry, you already turned the crank");
+	}
+ 
+	public void turnCrank() {
+		System.out.println("Turning twice doesn't get you another gumball!");
+	}
+ 
+	public void dispense() {
+		gumballMachine.releaseBall();
+		if (gumballMachine.getCount() > 0) {
+			gumballMachine.setState(gumballMachine.getNoQuarterState());
+		} else {
+			System.out.println("Oops, out of gumballs!");
+			gumballMachine.setState(gumballMachine.getSoldOutState());
+		}
+	}
+	
+	public void refill() { }
+ 
+	public String toString() {
+		return "dispensing a gumball";
+	}
+}
+
+public class SoldOutState implements State {
+    GumballMachine gumballMachine;
+ 
+    public SoldOutState(GumballMachine gumballMachine) {
+        this.gumballMachine = gumballMachine;
+    }
+ 
+	public void insertQuarter() {
+		System.out.println("You can't insert a quarter, the machine is sold out");
+	}
+ 
+	public void ejectQuarter() {
+		System.out.println("You can't eject, you haven't inserted a quarter yet");
+	}
+ 
+	public void turnCrank() {
+		System.out.println("You turned, but there are no gumballs");
+	}
+ 
+	public void dispense() {
+		System.out.println("No gumball dispensed");
+	}
+	
+	public void refill() { 
+		gumballMachine.setState(gumballMachine.getNoQuarterState());
+	}
+ 
+	public String toString() {
+		return "sold out";
+	}
+}
+
+public class GumballMachineTestDrive {
+
+	public static void main(String[] args) {
+		GumballMachine gumballMachine = new GumballMachine(2);
+
+		System.out.println(gumballMachine);
+
+		gumballMachine.insertQuarter();
+		gumballMachine.turnCrank();
+
+		System.out.println(gumballMachine);
+
+		gumballMachine.insertQuarter();
+		gumballMachine.turnCrank();
+		gumballMachine.insertQuarter();
+		gumballMachine.turnCrank();
+		
+		gumballMachine.refill(5);
+		gumballMachine.insertQuarter();
+		gumballMachine.turnCrank();
+
+		System.out.println(gumballMachine);
+	}
+}
+The output of this test run is:
+
+$ java GumballMachineTestDrive
+
+Mighty Gumball, Inc.
+Java-enabled Standing Gumball Model #2004
+Inventory: 2 gumballs
+Machine is waiting for quarter
+
+You inserted a quarter
+You turned...
+A gumball comes rolling out the slot...
+
+Mighty Gumball, Inc.
+Java-enabled Standing Gumball Model #2004
+Inventory: 1 gumball
+Machine is waiting for quarter
+
+You inserted a quarter
+You turned...
+A gumball comes rolling out the slot...
+Oops, out of gumballs!
+You can't insert a quarter, the machine is sold out
+You turned, but there are no gumballs
+No gumball dispensed
+The gumball machine was just refilled; it's new count is: 5
+You inserted a quarter
+You turned...
+A gumball comes rolling out the slot...
+
+Mighty Gumball, Inc.
+Java-enabled Standing Gumball Model #2004
+Inventory: 4 gumballs
+Machine is waiting for quarter
+
+10. Write a java program to implement Adapter pattern to design Heart Model to Beat Model.
+
+//Combine design pattern
+package combin;
+
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+
+public class BeatBar extends JProgressBar implements Runnable { 
+    JProgressBar progressBar;
+	Thread thread;
+
+	public BeatBar() {
+		thread = new Thread(this);
+		setMaximum(100);
+		thread.start();
+	}
+
+	public void run() {
+		for(;;) {
+			int value = getValue();
+			value = (int)(value * .75);
+			setValue(value);
+			repaint();
+			try {
+				Thread.sleep(50);
+			} catch (Exception e) {};
+		}
+	}
+}
+
+package combin;
+
+public class BeatController implements ControllerInterface {
+	BeatModelInterface model;
+	DJView view;
+   
+	public BeatController(BeatModelInterface model) {
+		this.model = model;
+		view = new DJView(this, model);
+        view.createView();
+        view.createControls();
+		view.disableStopMenuItem();
+		view.enableStartMenuItem();
+		model.initialize();
+	}
+  
+	public void start() {
+		model.on();
+		view.disableStartMenuItem();
+		view.enableStopMenuItem();
+	}
+  
+	public void stop() {
+		model.off();
+		view.disableStopMenuItem();
+		view.enableStartMenuItem();
+	}
+    
+	public void increaseBPM() {
+        int bpm = model.getBPM();
+        model.setBPM(bpm + 1);
+	}
+    
+	public void decreaseBPM() {
+        int bpm = model.getBPM();
+        model.setBPM(bpm - 1);
+  	}
+  
+ 	public void setBPM(int bpm) {
+		model.setBPM(bpm);
+	}
+}
+
+package combin;
+
+import javax.sound.midi.*;
+import java.util.*;
+
+public class BeatModel implements BeatModelInterface, MetaEventListener {
+    Sequencer sequencer;
+	ArrayList beatObservers = new ArrayList();
+	ArrayList bpmObservers = new ArrayList();
+    int bpm = 90;
+    Sequence sequence;
+    Track track;
+ 
+	public void initialize() {
+        setUpMidi();
+        buildTrackAndStart();
+	}
+ 
+    public void on() {
+        sequencer.start();
+        setBPM(90);
+    }
+ 
+    public void off() {
+		setBPM(0);
+		sequencer.stop();
+    }
+ 
+    public void setBPM(int bpm) {
+		this.bpm = bpm;
+		sequencer.setTempoInBPM(getBPM());
+		notifyBPMObservers();
+    }
+  
+	public int getBPM() {
+		return bpm;
+	}
+  
+	void beatEvent() {
+		notifyBeatObservers();
+	}
+  
+   
+	public void registerObserver(BeatObserver o) {
+		beatObservers.add(o);
+	}
+  
+	public void notifyBeatObservers() {
+		for(int i = 0; i < beatObservers.size(); i++) {
+			BeatObserver observer = (BeatObserver)beatObservers.get(i);
+			observer.updateBeat();
+		}
+	}
+  
+	public void registerObserver(BPMObserver o) {
+		bpmObservers.add(o);
+	}
+  
+	public void notifyBPMObservers() {
+		for(int i = 0; i < bpmObservers.size(); i++) {
+			BPMObserver observer = (BPMObserver)bpmObservers.get(i);
+			observer.updateBPM();
+		}
+	}
+
+
+	public void removeObserver(BeatObserver o) {
+		int i = beatObservers.indexOf(o);
+		if (i >= 0) {
+			beatObservers.remove(i);
+		}
+	}
+
+
+
+	public void removeObserver(BPMObserver o) {
+		int i = bpmObservers.indexOf(o);
+		if (i >= 0) {
+			bpmObservers.remove(i);
+		}
+	}
+
+
+    public void meta(MetaMessage message) {
+        if (message.getType() == 47) {
+			beatEvent();
+        	sequencer.start();
+        	setBPM(getBPM());
+        }
+    }
+
+	public void setUpMidi() {
+		try {
+			sequencer = MidiSystem.getSequencer();
+			sequencer.open();
+			sequencer.addMetaEventListener(this);
+			sequence = new Sequence(Sequence.PPQ,4);
+			track = sequence.createTrack();
+			sequencer.setTempoInBPM(getBPM());
+		} catch(Exception e) {
+				e.printStackTrace();
+		}
+    } 
+
+     public void buildTrackAndStart() {
+        int[] trackList = {35, 0, 46, 0};
+    
+        sequence.deleteTrack(null);
+        track = sequence.createTrack();
+
+      	makeTracks(trackList);
+		track.add(makeEvent(192,9,1,0,4));      
+	 	try {
+			sequencer.setSequence(sequence);                    
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+    } 
+            
+    public void makeTracks(int[] list) {        
+       
+       for (int i = 0; i < list.length; i++) {
+          int key = list[i];
+
+          if (key != 0) {
+             track.add(makeEvent(144,9,key, 100, i));
+             track.add(makeEvent(128,9,key, 100, i+1));
+          }
+       }
+    }
+        
+    public  MidiEvent makeEvent(int comd, int chan, int one, int two, int tick) {
+        MidiEvent event = null;
+        try {
+            ShortMessage a = new ShortMessage();
+            a.setMessage(comd, chan, one, two);
+            event = new MidiEvent(a, tick);
+            
+        } catch(Exception e) {
+			e.printStackTrace(); 
+		}
+        return event;
+    }
+}
+
+package combin;
+
+public interface BeatModelInterface {
+	void initialize();
+  
+	void on();
+  
+	void off();
+  
+    void setBPM(int bpm);
+  
+	int getBPM();
+  
+	void registerObserver(BeatObserver o);
+  
+	void removeObserver(BeatObserver o);
+  
+	void registerObserver(BPMObserver o);
+  
+	void removeObserver(BPMObserver o);
+}
+
+package combin;
+
+public interface BeatObserver {
+	void updateBeat();
+}
+
+package combin;
+
+public interface BPMObserver {
+	void updateBPM();
+}
+
+package combin;
+
+public interface ControllerInterface {
+	void start();
+	void stop();
+	void increaseBPM();
+	void decreaseBPM();
+ 	void setBPM(int bpm);
+}
+
+package combin;
+
+public class DJTestDrive {
+
+    public static void main (String[] args) {
+        BeatModelInterface model = new BeatModel();
+		ControllerInterface controller = new BeatController(model);
+    }
+}
+
+
+package combin;
+
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+
+public class DJView implements ActionListener,  BeatObserver, BPMObserver {
+	BeatModelInterface model;
+	ControllerInterface controller;
+    JFrame viewFrame;
+    JPanel viewPanel;
+	BeatBar beatBar;
+	JLabel bpmOutputLabel;
+    JFrame controlFrame;
+    JPanel controlPanel;
+    JLabel bpmLabel;
+    JTextField bpmTextField;
+    JButton setBPMButton;
+    JButton increaseBPMButton;
+    JButton decreaseBPMButton;
+    JMenuBar menuBar;
+    JMenu menu;
+    JMenuItem startMenuItem;
+    JMenuItem stopMenuItem;
+
+    public DJView(ControllerInterface controller, BeatModelInterface model) {	
+		this.controller = controller;
+		this.model = model;
+		model.registerObserver((BeatObserver)this);
+		model.registerObserver((BPMObserver)this);
+    }
+    
+    public void createView() {
+		// Create all Swing components here
+        viewPanel = new JPanel(new GridLayout(1, 2));
+        viewFrame = new JFrame("View");
+        viewFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        viewFrame.setSize(new Dimension(100, 80));
+        bpmOutputLabel = new JLabel("offline", SwingConstants.CENTER);
+		beatBar = new BeatBar();
+		beatBar.setValue(0);
+        JPanel bpmPanel = new JPanel(new GridLayout(2, 1));
+		bpmPanel.add(beatBar);
+        bpmPanel.add(bpmOutputLabel);
+        viewPanel.add(bpmPanel);
+        viewFrame.getContentPane().add(viewPanel, BorderLayout.CENTER);
+        viewFrame.pack();
+        viewFrame.setVisible(true);
+	}
+  
+  
+    public void createControls() {
+		// Create all Swing components here
+        JFrame.setDefaultLookAndFeelDecorated(true);
+        controlFrame = new JFrame("Control");
+        controlFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        controlFrame.setSize(new Dimension(100, 80));
+
+        controlPanel = new JPanel(new GridLayout(1, 2));
+
+        menuBar = new JMenuBar();
+        menu = new JMenu("DJ Control");
+        startMenuItem = new JMenuItem("Start");
+        menu.add(startMenuItem);
+        startMenuItem.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent event) {
+                controller.start();
+            }
+        });
+        stopMenuItem = new JMenuItem("Stop");
+        menu.add(stopMenuItem); 
+        stopMenuItem.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent event) {
+                controller.stop();
+            }
+        });
+        JMenuItem exit = new JMenuItem("Quit");
+        exit.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent event) {
+                System.exit(0);
+            }
+        });
+
+        menu.add(exit);
+        menuBar.add(menu);
+        controlFrame.setJMenuBar(menuBar);
+
+        bpmTextField = new JTextField(2);
+        bpmLabel = new JLabel("Enter BPM:", SwingConstants.RIGHT);
+        setBPMButton = new JButton("Set");
+        setBPMButton.setSize(new Dimension(10,40));
+        increaseBPMButton = new JButton(">>");
+        decreaseBPMButton = new JButton("<<");
+        setBPMButton.addActionListener(this);
+        increaseBPMButton.addActionListener(this);
+        decreaseBPMButton.addActionListener(this);
+
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2));
+
+		buttonPanel.add(decreaseBPMButton);
+		buttonPanel.add(increaseBPMButton);
+
+        JPanel enterPanel = new JPanel(new GridLayout(1, 2));
+        enterPanel.add(bpmLabel);
+        enterPanel.add(bpmTextField);
+        JPanel insideControlPanel = new JPanel(new GridLayout(3, 1));
+        insideControlPanel.add(enterPanel);
+        insideControlPanel.add(setBPMButton);
+        insideControlPanel.add(buttonPanel);
+        controlPanel.add(insideControlPanel);
+        
+        bpmLabel.setBorder(BorderFactory.createEmptyBorder(5,5,5,5));
+        bpmOutputLabel.setBorder(BorderFactory.createEmptyBorder(5,5,5,5));
+
+        controlFrame.getRootPane().setDefaultButton(setBPMButton);
+        controlFrame.getContentPane().add(controlPanel, BorderLayout.CENTER);
+
+        controlFrame.pack();
+        controlFrame.setVisible(true);
+    }
+
+	public void enableStopMenuItem() {
+    	stopMenuItem.setEnabled(true);
+	}
+
+	public void disableStopMenuItem() {
+    	stopMenuItem.setEnabled(false);
+	}
+
+	public void enableStartMenuItem() {
+    	startMenuItem.setEnabled(true);
+	}
+
+	public void disableStartMenuItem() {
+    	startMenuItem.setEnabled(false);
+	}
+
+    public void actionPerformed(ActionEvent event) {
+		if (event.getSource() == setBPMButton) {
+			int bpm = Integer.parseInt(bpmTextField.getText());
+        	controller.setBPM(bpm);
+		} else if (event.getSource() == increaseBPMButton) {
+			controller.increaseBPM();
+		} else if (event.getSource() == decreaseBPMButton) {
+			controller.decreaseBPM();
+		}
+    }
+
+	public void updateBPM() {
+		if (model != null) {
+			int bpm = model.getBPM();
+			if (bpm == 0) {
+				if (bpmOutputLabel != null) {
+        			bpmOutputLabel.setText("offline");
+				}
+			} else {
+				if (bpmOutputLabel != null) {
+        			bpmOutputLabel.setText("Current BPM: " + model.getBPM());
+				}
+			}
+		}
+	}
+  
+	public void updateBeat() {
+		if (beatBar != null) {
+			 beatBar.setValue(100);
+		}
+	}
+}
+
+package combin;
+
+public class HeartAdapter implements BeatModelInterface {
+	HeartModelInterface heart;
+ 
+	public HeartAdapter(HeartModelInterface heart) {
+		this.heart = heart;
+	}
+
+    public void initialize() {}
+  
+    public void on() {}
+  
+    public void off() {}
+   
+	public int getBPM() {
+		return heart.getHeartRate();
+	}
+  
+    public void setBPM(int bpm) {}
+   
+	public void registerObserver(BeatObserver o) {
+		heart.registerObserver(o);
+	}
+    
+	public void removeObserver(BeatObserver o) {
+		heart.removeObserver(o);
+	}
+     
+	public void registerObserver(BPMObserver o) {
+		heart.registerObserver(o);
+	}
+  
+	public void removeObserver(BPMObserver o) {
+		heart.removeObserver(o);
+	}
+}
+
+package combin;
+
+public class HeartController implements ControllerInterface {
+	HeartModelInterface model;
+	DJView view;
+  
+	public HeartController(HeartModelInterface model) {
+		this.model = model;
+		view = new DJView(this, new HeartAdapter(model));
+        view.createView();
+        view.createControls();
+		view.disableStopMenuItem();
+		view.disableStartMenuItem();
+	}
+  
+	public void start() {}
+ 
+	public void stop() {}
+    
+	public void increaseBPM() {}
+    
+	public void decreaseBPM() {}
+  
+ 	public void setBPM(int bpm) {}
+}
+
+package combin;
+
+import java.util.*;
+
+public class HeartModel implements HeartModelInterface, Runnable {
+	ArrayList beatObservers = new ArrayList();
+	ArrayList bpmObservers = new ArrayList();
+	int time = 1000;
+    int bpm = 90;
+	Random random = new Random(System.currentTimeMillis());
+	Thread thread;
+
+	public HeartModel() {
+		thread = new Thread(this);
+		thread.start();
+	}
+
+	public void run() {
+		int lastrate = -1;
+
+		for(;;) {
+			int change = random.nextInt(10);
+			if (random.nextInt(2) == 0) {
+				change = 0 - change;
+			}
+			int rate = 60000/(time + change);
+			if (rate < 120 && rate > 50) {
+				time += change;
+				notifyBeatObservers();
+				if (rate != lastrate) {
+					lastrate = rate;
+					notifyBPMObservers();
+				}
+			}
+			try {
+				Thread.sleep(time);
+			} catch (Exception e) {}
+		}
+	}
+	public int getHeartRate() {
+		return 60000/time;
+	}
+
+	public void registerObserver(BeatObserver o) {
+		beatObservers.add(o);
+	}
+
+	public void removeObserver(BeatObserver o) {
+		int i = beatObservers.indexOf(o);
+		if (i >= 0) {
+			beatObservers.remove(i);
+		}
+	}
+
+	public void notifyBeatObservers() {
+		for(int i = 0; i < beatObservers.size(); i++) {
+			BeatObserver observer = (BeatObserver)beatObservers.get(i);
+			observer.updateBeat();
+		}
+	}
+
+	public void registerObserver(BPMObserver o) {
+		bpmObservers.add(o);
+	}
+
+	public void removeObserver(BPMObserver o) {
+		int i = bpmObservers.indexOf(o);
+		if (i >= 0) {
+			bpmObservers.remove(i);
+		}
+	}
+
+	public void notifyBPMObservers() {
+		for(int i = 0; i < bpmObservers.size(); i++) {
+			BPMObserver observer = (BPMObserver)bpmObservers.get(i);
+			observer.updateBPM();
+		}
+	}
+}
+
+package combin;
+
+public interface HeartModelInterface {
+	int getHeartRate();
+	void registerObserver(BeatObserver o);
+	void removeObserver(BeatObserver o);
+	void registerObserver(BPMObserver o);
+	void removeObserver(BPMObserver o);
+}
+
+package combin;
+
+public class HeartTestDrive {
+
+    public static void main (String[] args) {
+		HeartModel heartModel = new HeartModel();
+        ControllerInterface model = new HeartController(heartModel);
+    }
+} 
